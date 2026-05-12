@@ -1,69 +1,55 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="acfrr/XrayR11"
-REF="master"
+TAG="v0.9.5"
+FILE="XrayR-linux-64.zip"
+BASE_URL="https://github.com/acfrr/XrayR11/releases/download/${TAG}"
 INSTALL_DIR="/usr/local/XrayR"
 CONFIG_DIR="/etc/XrayR"
-TMP_DIR="/tmp/xrayr11-build"
-GO_VERSION="1.22.12"
+TMP_DIR="/tmp/xrayr-install"
 
-need_root() {
-  if [ "$(id -u)" != "0" ]; then
-    echo "请用 root 运行"
-    exit 1
-  fi
-}
-
-need_go_upgrade() {
-  if ! command -v go >/dev/null 2>&1; then
-    return 0
-  fi
-
-  current="$(go version | awk '{print $3}' | sed 's/^go//')"
-  minimum="1.21.0"
-
-  if [ "$(printf '%s\n' "$minimum" "$current" | sort -V | head -n1)" != "$minimum" ]; then
-    return 0
-  fi
-
-  return 1
-}
-
-install_go() {
-  cd /tmp
-  rm -rf /usr/local/go "go${GO_VERSION}.linux-amd64.tar.gz"
-  wget -O "go${GO_VERSION}.linux-amd64.tar.gz" "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz"
-  tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
-  export PATH=/usr/local/go/bin:$PATH
-}
-
-need_root
-export PATH=/usr/local/go/bin:$PATH
+if [ "$(id -u)" != "0" ]; then
+  echo "请用 root 运行"
+  exit 1
+fi
 
 echo "==> 安装依赖"
 apt update
-apt install -y git wget curl ca-certificates tar gzip build-essential
+apt install -y wget unzip curl ca-certificates
 
-if need_go_upgrade; then
-  echo "==> 安装 Go ${GO_VERSION}"
-  install_go
-fi
-
-echo "==> 当前 Go 版本"
-go version
-
-echo "==> 下载源码"
+echo "==> 下载预编译包"
 rm -rf "${TMP_DIR}"
 mkdir -p "${TMP_DIR}"
 cd "${TMP_DIR}"
-wget -O source.tar.gz "https://github.com/${REPO}/archive/refs/heads/${REF}.tar.gz"
-tar -xzf source.tar.gz
-SRC_DIR="$(find "${TMP_DIR}" -maxdepth 1 -type d -name 'XrayR11-*' | head -n 1)"
+wget -O "${FILE}" "${BASE_URL}/${FILE}"
 
-echo "==> 编译程序"
-cd "${SRC_DIR}"
-go build -o XrayR ./main.go
+echo "==> 解压安装"
+unzip -o "${FILE}"
 
-echo "==> 安装程序"
-mkdir -p 
+mkdir -p "${INSTALL_DIR}"
+mkdir -p "${CONFIG_DIR}"
+
+if [ -f XrayR ]; then
+  cp XrayR "${INSTALL_DIR}/XrayR"
+elif [ -f ./XrayR/XrayR ]; then
+  cp ./XrayR/XrayR "${INSTALL_DIR}/XrayR"
+else
+  BIN_PATH="$(find . -type f -name XrayR | head -n 1 || true)"
+  if [ -z "${BIN_PATH}" ]; then
+    echo "没找到 XrayR 可执行文件"
+    exit 1
+  fi
+  cp "${BIN_PATH}" "${INSTALL_DIR}/XrayR"
+fi
+
+chmod +x "${INSTALL_DIR}/XrayR"
+
+CFG_PATH="$(find . -type f \( -name config.yml -o -name config.yaml \) | head -n 1 || true)"
+if [ -n "${CFG_PATH}" ]; then
+  cp -n "${CFG_PATH}" "${CONFIG_DIR}/config.yml" || true
+fi
+
+echo "==> 完成"
+echo "程序路径: ${INSTALL_DIR}/XrayR"
+echo "配置路径: ${CONFIG_DIR}/config.yml"
+echo "测试命令: ${INSTALL_DIR}/XrayR"
