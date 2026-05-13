@@ -15,6 +15,7 @@ plain='\033[0m'
 XRAYR_BIN="/usr/local/XrayR/XrayR"
 XRAYR_CONFIG="/etc/XrayR/config.yml"
 XRAYR_LOG="/var/log/XrayR/xrayr.log"
+RAW_URL="https://raw.githubusercontent.com/acfrr/XrayR11/master"
 
 check_status() {
     if [[ ! -f /etc/systemd/system/XrayR.service ]]; then
@@ -78,35 +79,43 @@ show_status() {
     echo -e "${cyan}========================================${plain}"
 }
 
+bbr_install() {
+    wget -N --no-check-certificate "${RAW_URL}/tcp.sh" -O /tmp/tcp.sh 2>/dev/null
+    chmod +x /tmp/tcp.sh
+    /tmp/tcp.sh
+}
+
+swap_manage() {
+    wget -N --no-check-certificate "${RAW_URL}/swap.sh" -O /tmp/swap.sh 2>/dev/null
+    chmod +x /tmp/swap.sh
+    /tmp/swap.sh
+}
+
+streaming_check() {
+    wget -N --no-check-certificate "${RAW_URL}/check.sh" -O /tmp/check.sh 2>/dev/null
+    chmod +x /tmp/check.sh
+    /tmp/check.sh
+}
+
 show_menu() {
     echo -e "
-  ${cyan}XrayR 管理脚本${plain}  ${yellow}v0.9.5${plain}
+  ${cyan}XrayR 管理菜单${plain}  ${yellow}v0.9.5${plain}
   ${green}0${plain}. 退出脚本
   ${cyan}————————————————————————${plain}
-  ${green}1${plain}. 安装 XrayR
-  ${green}2${plain}. 更新 XrayR
-  ${green}3${plain}. 卸载 XrayR
+  ${green}1${plain}. 安装 XrayR         ${green}2${plain}. 更新 XrayR         ${green}3${plain}. 卸载 XrayR
   ${cyan}————————————————————————${plain}
-  ${green}4${plain}. 启动 XrayR
-  ${green}5${plain}. 停止 XrayR
-  ${green}6${plain}. 重启 XrayR
+  ${green}4${plain}. 启动 XrayR         ${green}5${plain}. 停止 XrayR         ${green}6${plain}. 重启 XrayR
   ${cyan}————————————————————————${plain}
-  ${green}7${plain}. 查看状态
-  ${green}8${plain}. 查看日志
-  ${green}9${plain}. 实时日志
+  ${green}7${plain}. 查看状态           ${green}8${plain}. 查看日志           ${green}9${plain}. 实时日志
   ${cyan}————————————————————————${plain}
-  ${green}10${plain}. 编辑配置
-  ${green}11${plain}. 查看配置
-  ${green}12${plain}. 一键安装 BBR (最新内核)
+  ${green}10${plain}. 编辑配置          ${green}11${plain}. 查看配置          ${green}12${plain}. TCP加速 (BBR/锐速)
   ${cyan}————————————————————————${plain}
-  ${green}13${plain}. 设置开机自启
-  ${green}14${plain}. 取消开机自启
+  ${green}13${plain}. 开机自启          ${green}14${plain}. 取消自启          ${green}15${plain}. 内存使用
   ${cyan}————————————————————————${plain}
-  ${green}15${plain}. 查看内存使用
-  ${green}16${plain}. 低内存优化
+  ${green}16${plain}. 低内存优化        ${green}17${plain}. SWAP管理          ${green}18${plain}. 流媒体解锁测试
   ${cyan}————————————————————————${plain}
  "
-    echo && read -p "请输入选择 [0-16]: " num
+    echo && read -p "请输入选择 [0-18]: " num
     case "${num}" in
         0) exit 0 ;;
         1) install_xrayr ;;
@@ -125,17 +134,19 @@ show_menu() {
         14) disable_xrayr ;;
         15) check_memory ;;
         16) lowmem_tune ;;
-        *) echo -e "${red}请输入正确的数字 [0-16]${plain}" ;;
+        17) swap_manage ;;
+        18) streaming_check ;;
+        *) echo -e "${red}请输入正确的数字 [0-18]${plain}" ;;
     esac
 }
 
 install_xrayr() {
-    bash <(curl -Ls https://raw.githubusercontent.com/acfrr/XrayR11/master/install.sh)
+    bash <(curl -Ls ${RAW_URL}/install.sh) --install
 }
 
 update_xrayr() {
     read -p "请输入版本号 (留空为最新版): " version
-    bash <(curl -Ls https://raw.githubusercontent.com/acfrr/XrayR11/master/install.sh) "$version"
+    bash <(curl -Ls ${RAW_URL}/install.sh) --install "$version"
 }
 
 uninstall_xrayr() {
@@ -241,15 +252,6 @@ show_config() {
     fi
 }
 
-bbr_install() {
-    echo -e "${cyan}========================================${plain}"
-    echo -e "${cyan}  一键安装 BBR/BBRPlus/锐速 管理脚本${plain}"
-    echo -e "${cyan}========================================${plain}"
-    wget -N --no-check-certificate "https://raw.githubusercontent.com/ylx2016/Linux-NetSpeed/master/tcp.sh" -O /tmp/tcp.sh
-    chmod +x /tmp/tcp.sh
-    /tmp/tcp.sh
-}
-
 enable_xrayr() {
     systemctl enable XrayR
     echo -e "${green}已设置开机自启${plain}"
@@ -335,6 +337,8 @@ case "$1" in
     uninstall|un) uninstall_xrayr ;;
     version)    "$XRAYR_BIN" version 2>/dev/null || echo "XrayR 未安装" ;;
     bbr)        bbr_install ;;
+    swap)       swap_manage ;;
+    check)      streaming_check ;;
     mem|memory) check_memory ;;
     tune)       lowmem_tune ;;
     *)  # Interactive menu
