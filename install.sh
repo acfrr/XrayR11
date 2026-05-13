@@ -261,14 +261,14 @@ show_menu() {
   ${cyan}————————————————————————${plain}
   ${green}7${plain}. 查看状态           ${green}8${plain}. 查看日志           ${green}9${plain}. 实时日志
   ${cyan}————————————————————————${plain}
-  ${green}10${plain}. 编辑配置          ${green}11${plain}. 查看配置          ${green}12${plain}. TCP加速 (BBR/锐速)
+  ${green}10${plain}. 编辑配置          ${green}11${plain}. 查看配置
   ${cyan}————————————————————————${plain}
-  ${green}13${plain}. 开机自启          ${green}14${plain}. 取消自启          ${green}15${plain}. 内存使用
+  ${green}12${plain}. 开机自启          ${green}13${plain}. 取消自启          ${green}14${plain}. 内存使用
   ${cyan}————————————————————————${plain}
-  ${green}16${plain}. 低内存优化        ${green}17${plain}. SWAP管理          ${green}18${plain}. 流媒体解锁测试
+  ${green}15${plain}. 低内存优化
   ${cyan}————————————————————————${plain}
  "
-    echo && read -p "请输入选择 [0-18]: " num
+    echo && read -p "请输入选择 [0-15]: " num
     case "${num}" in
         0) return ;;
         1) bash <(curl -Ls ${RAW_URL}/install.sh) --install ;;
@@ -304,10 +304,9 @@ show_menu() {
                 echo -e "${green}已保存，使用 XrayR restart 生效${plain}"
             else echo -e "${red}配置文件不存在${plain}"; fi ;;
         11) [[ -f "$XRAYR_CONFIG" ]] && cat "$XRAYR_CONFIG" || echo -e "${red}配置文件不存在${plain}" ;;
-        12) bbr_install ;;
-        13) systemctl enable XrayR && echo -e "${green}已设置开机自启${plain}" ;;
-        14) systemctl disable XrayR && echo -e "${green}已取消开机自启${plain}" ;;
-        15)
+        12) systemctl enable XrayR && echo -e "${green}已设置开机自启${plain}" ;;
+        13) systemctl disable XrayR && echo -e "${green}已取消开机自启${plain}" ;;
+        14)
             echo -e "${cyan}=== 系统内存 ===${plain}"
             grep -E "MemTotal|MemAvailable|SwapTotal|SwapFree" /proc/meminfo 2>/dev/null | while read line; do echo "  $line"; done
             check_status 2>/dev/null
@@ -320,7 +319,7 @@ show_menu() {
             fi
             local tm=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print int($2/1024)}')
             [[ -n "$tm" && "$tm" -lt 128 ]] && echo -e "\n${yellow}内存低于128MB，建议运行 XrayR tune${plain}" ;;
-        16)
+        15)
             echo -e "${yellow}正在应用低内存优化...${plain}"
             sysctl -w vm.swappiness=10 2>/dev/null || true
             local tm=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}')
@@ -336,12 +335,10 @@ LMEOF
                 echo -e "${green}已设置 GOMEMLIMIT=$(( tm / 2 ))KiB${plain}"
             fi
             if [[ ! -f /proc/swaps ]] || [[ "$(wc -l < /proc/swaps)" -le 1 ]]; then
-                echo -e "${yellow}提示：未检测到 swap，可使用菜单17添加${plain}"
+                echo -e "${yellow}提示：未检测到 swap，可从工具箱菜单3添加${plain}"
             fi
             echo -e "${green}低内存优化完成${plain}" ;;
-        17) swap_manage ;;
-        18) streaming_check ;;
-        *) echo -e "${red}请输入正确的数字 [0-18]${plain}" ;;
+        *) echo -e "${red}请输入正确的数字 [0-15]${plain}" ;;
     esac
 }
 
@@ -369,9 +366,6 @@ case "$1" in
         rm -rf /usr/local/XrayR/ /etc/XrayR/; rm -f /usr/bin/XrayR /usr/bin/xrayr
         echo -e "${green}已完全卸载${plain}" ;;
     version)  [[ -f "$XRAYR_BIN" ]] && "$XRAYR_BIN" version || echo "未安装" ;;
-    bbr)      bbr_install ;;
-    swap)     swap_manage ;;
-    check)    streaming_check ;;
     mem|memory)
         echo -e "${cyan}=== 系统内存 ===${plain}"
         grep -E "MemTotal|MemAvailable|SwapTotal|SwapFree" /proc/meminfo 2>/dev/null | while read line; do echo "  $line"; done
@@ -449,11 +443,12 @@ hub_menu() {
   ${green}2${plain}. 安装/更新 XrayR
   ${green}3${plain}. SWAP 一键管理
   ${green}4${plain}. 流媒体解锁测试
+	  ${green}5${plain}. TCP 加速 (BBR/锐速)
   ${cyan}————————————————————————${plain}
   ${green}0${plain}. 退出
   ${cyan}========================================${plain}
  "
-        echo && read -p "请输入选择 [0-4] (默认1): " choice
+        echo && read -p "请输入选择 [0-5] (默认1):" choice
         choice=${choice:-1}
 
         case "${choice}" in
@@ -477,8 +472,12 @@ hub_menu() {
                 wget -N --no-check-certificate "${RAW_URL}/check.sh" -O /tmp/check.sh 2>/dev/null
                 chmod +x /tmp/check.sh
                 bash /tmp/check.sh ;;
+           5)
+                wget -N --no-check-certificate "${RAW_URL}/tcp.sh" -O /tmp/tcp.sh 2>/dev/null
+                chmod +x /tmp/tcp.sh
+                bash /tmp/tcp.sh ;;
             0) exit 0 ;;
-            *) echo -e "${red}请输入正确的数字 [0-4]${plain}" ;;
+            *) echo -e "${red}请输入正确的数字 [0-5]${plain}" ;;
         esac
         echo ""; read -p "按 Enter 返回工具箱..."
     done
