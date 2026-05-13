@@ -245,6 +245,43 @@ show_status() {
     echo -e "${cyan}========================================${plain}"
 }
 
+bbr_install() {
+    echo -e "${cyan}========================================${plain}"
+    echo -e "${cyan}  一键安装 BBR (最新内核)${plain}"
+    echo -e "${cyan}========================================${plain}"
+
+    local kernel_ver
+    kernel_ver=$(uname -r 2>/dev/null | cut -d- -f1)
+    echo -e "当前内核版本: ${yellow}${kernel_ver}${plain}"
+
+    # Check if BBR is already enabled
+    local current_cc
+    current_cc=$(sysctl -n net.ipv4.tcp_congestion_control 2>/dev/null)
+    if [[ "$current_cc" == "bbr" ]]; then
+        echo -e "${green}BBR 已启用，无需重复安装${plain}"
+        return
+    fi
+
+    echo -e "${yellow}正在启用 BBR...${plain}"
+
+    # Enable BBR
+    echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
+    echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
+    sysctl -p >/dev/null 2>&1
+
+    current_cc=$(sysctl -n net.ipv4.tcp_congestion_control 2>/dev/null)
+    if [[ "$current_cc" == "bbr" ]]; then
+        echo -e "${green}BBR 启用成功!${plain}"
+        echo -e "当前拥塞控制算法: ${green}${current_cc}${plain}"
+        local qdisc
+        qdisc=$(sysctl -n net.core.default_qdisc 2>/dev/null)
+        echo -e "当前队列算法:       ${green}${qdisc}${plain}"
+    else
+        echo -e "${yellow}内核版本 ${kernel_ver} 可能不支持 BBR${plain}"
+        echo -e "${yellow}BBR 需要内核 4.9+，你可以在 XrayR 菜单中先升级内核${plain}"
+    fi
+}
+
 show_menu() {
     echo -e "
   ${cyan}XrayR 管理脚本${plain}  ${yellow}v0.9.5${plain}
@@ -264,7 +301,7 @@ show_menu() {
   ${cyan}————————————————————————${plain}
   ${green}10${plain}. 编辑配置
   ${green}11${plain}. 查看配置
-  ${green}12${plain}. 生成 x25519 密钥
+  ${green}12${plain}. 一键安装 BBR (最新内核)
   ${cyan}————————————————————————${plain}
   ${green}13${plain}. 设置开机自启
   ${green}14${plain}. 取消开机自启
@@ -334,7 +371,7 @@ show_menu() {
             fi
             ;;
         11) [[ -f "$XRAYR_CONFIG" ]] && cat "$XRAYR_CONFIG" || echo -e "${red}配置文件不存在${plain}" ;;
-        12) [[ -f "$XRAYR_BIN" ]] && "$XRAYR_BIN" x25519 || echo -e "${red}XrayR 未安装${plain}" ;;
+        12) bbr_install ;;
         13) systemctl enable XrayR && echo -e "${green}已设置开机自启${plain}" ;;
         14) systemctl disable XrayR && echo -e "${green}已取消开机自启${plain}" ;;
         15)
@@ -410,7 +447,7 @@ case "$1" in
         rm -f /usr/bin/XrayR /usr/bin/xrayr
         echo -e "${green}XrayR 已完全卸载${plain}" ;;
     version)  [[ -f "$XRAYR_BIN" ]] && "$XRAYR_BIN" version || echo "XrayR 未安装" ;;
-    key)      [[ -f "$XRAYR_BIN" ]] && "$XRAYR_BIN" x25519 || echo -e "${red}XrayR 未安装${plain}" ;;
+    bbr)      bbr_install ;;
     mem|memory)
         echo -e "${cyan}=== 系统内存 ===${plain}"
         grep -E "MemTotal|MemAvailable|SwapTotal|SwapFree" /proc/meminfo 2>/dev/null | while read line; do echo "  $line"; done
@@ -509,7 +546,7 @@ LMEOF
     echo "XrayR install            - 安装 XrayR"
     echo "XrayR uninstall          - 卸载 XrayR"
     echo "XrayR version            - 查看 XrayR 版本"
-    echo "XrayR key                - 生成 x25519 密钥"
+    echo "XrayR bbr                - 一键安装 BBR"
     echo "XrayR mem                - 查看内存使用"
     echo "XrayR tune               - 低内存优化"
     echo "------------------------------------------"

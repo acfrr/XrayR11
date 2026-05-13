@@ -97,7 +97,7 @@ show_menu() {
   ${cyan}————————————————————————${plain}
   ${green}10${plain}. 编辑配置
   ${green}11${plain}. 查看配置
-  ${green}12${plain}. 生成 x25519 密钥
+  ${green}12${plain}. 一键安装 BBR (最新内核)
   ${cyan}————————————————————————${plain}
   ${green}13${plain}. 设置开机自启
   ${green}14${plain}. 取消开机自启
@@ -120,7 +120,7 @@ show_menu() {
         9) live_log ;;
         10) edit_config ;;
         11) show_config ;;
-        12) gen_key ;;
+        12) bbr_install ;;
         13) enable_xrayr ;;
         14) disable_xrayr ;;
         15) check_memory ;;
@@ -241,11 +241,38 @@ show_config() {
     fi
 }
 
-gen_key() {
-    if [[ -f "$XRAYR_BIN" ]]; then
-        "$XRAYR_BIN" x25519
+bbr_install() {
+    echo -e "${cyan}========================================${plain}"
+    echo -e "${cyan}  一键安装 BBR (最新内核)${plain}"
+    echo -e "${cyan}========================================${plain}"
+
+    local kernel_ver
+    kernel_ver=$(uname -r 2>/dev/null | cut -d- -f1)
+    echo -e "当前内核版本: ${yellow}${kernel_ver}${plain}"
+
+    local current_cc
+    current_cc=$(sysctl -n net.ipv4.tcp_congestion_control 2>/dev/null)
+    if [[ "$current_cc" == "bbr" ]]; then
+        echo -e "${green}BBR 已启用，无需重复安装${plain}"
+        return
+    fi
+
+    echo -e "${yellow}正在启用 BBR...${plain}"
+
+    echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
+    echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
+    sysctl -p >/dev/null 2>&1
+
+    current_cc=$(sysctl -n net.ipv4.tcp_congestion_control 2>/dev/null)
+    if [[ "$current_cc" == "bbr" ]]; then
+        echo -e "${green}BBR 启用成功!${plain}"
+        echo -e "当前拥塞控制算法: ${green}${current_cc}${plain}"
+        local qdisc
+        qdisc=$(sysctl -n net.core.default_qdisc 2>/dev/null)
+        echo -e "当前队列算法:       ${green}${qdisc}${plain}"
     else
-        echo -e "${red}XrayR 未安装${plain}"
+        echo -e "${yellow}内核版本 ${kernel_ver} 可能不支持 BBR${plain}"
+        echo -e "${yellow}BBR 需要内核 4.9+，可尝试升级系统内核后重试${plain}"
     fi
 }
 
@@ -333,7 +360,7 @@ case "$1" in
     install)    install_xrayr ;;
     uninstall|un) uninstall_xrayr ;;
     version)    "$XRAYR_BIN" version 2>/dev/null || echo "XrayR 未安装" ;;
-    key)        gen_key ;;
+    bbr)        bbr_install ;;
     mem|memory) check_memory ;;
     tune)       lowmem_tune ;;
     *)  # Interactive menu
