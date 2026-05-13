@@ -18,4 +18,5 @@ access.log
 error.log
 .lego
 cert
-config.yml
+config.yml*.zip
+*.dgst
