@@ -443,7 +443,7 @@ hub_menu() {
   ${green}2${plain}. 安装/更新 XrayR
   ${green}3${plain}. SWAP 一键管理
   ${green}4${plain}. 流媒体解锁测试
-	  ${green}5${plain}. TCP 加速 (BBR/锐速)
+  ${green}5${plain}. TCP 加速 (BBR/锐速)
   ${cyan}————————————————————————${plain}
   ${green}0${plain}. 退出
   ${cyan}========================================${plain}
