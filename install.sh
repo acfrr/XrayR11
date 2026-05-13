@@ -247,39 +247,11 @@ show_status() {
 
 bbr_install() {
     echo -e "${cyan}========================================${plain}"
-    echo -e "${cyan}  一键安装 BBR (最新内核)${plain}"
+    echo -e "${cyan}  一键安装 BBR/BBRPlus/锐速 管理脚本${plain}"
     echo -e "${cyan}========================================${plain}"
-
-    local kernel_ver
-    kernel_ver=$(uname -r 2>/dev/null | cut -d- -f1)
-    echo -e "当前内核版本: ${yellow}${kernel_ver}${plain}"
-
-    # Check if BBR is already enabled
-    local current_cc
-    current_cc=$(sysctl -n net.ipv4.tcp_congestion_control 2>/dev/null)
-    if [[ "$current_cc" == "bbr" ]]; then
-        echo -e "${green}BBR 已启用，无需重复安装${plain}"
-        return
-    fi
-
-    echo -e "${yellow}正在启用 BBR...${plain}"
-
-    # Enable BBR
-    echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
-    echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
-    sysctl -p >/dev/null 2>&1
-
-    current_cc=$(sysctl -n net.ipv4.tcp_congestion_control 2>/dev/null)
-    if [[ "$current_cc" == "bbr" ]]; then
-        echo -e "${green}BBR 启用成功!${plain}"
-        echo -e "当前拥塞控制算法: ${green}${current_cc}${plain}"
-        local qdisc
-        qdisc=$(sysctl -n net.core.default_qdisc 2>/dev/null)
-        echo -e "当前队列算法:       ${green}${qdisc}${plain}"
-    else
-        echo -e "${yellow}内核版本 ${kernel_ver} 可能不支持 BBR${plain}"
-        echo -e "${yellow}BBR 需要内核 4.9+，你可以在 XrayR 菜单中先升级内核${plain}"
-    fi
+    wget -N --no-check-certificate "https://raw.githubusercontent.com/ylx2016/Linux-NetSpeed/master/tcp.sh" -O /tmp/tcp.sh
+    chmod +x /tmp/tcp.sh
+    /tmp/tcp.sh
 }
 
 show_menu() {
